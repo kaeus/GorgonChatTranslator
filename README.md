@@ -9,8 +9,6 @@ barely touches any translation API), and shows translations of the rest. Press
 a hotkey and it translates *your* last message into the last foreign language
 someone used and copies it to the clipboard.
 
-![overlay](docs/screenshot.png)
-
 ---
 
 ## Features
