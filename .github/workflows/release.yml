@@ -5,7 +5,7 @@ name: build-release
 # number, and the newest release is always surfaced by GitHub as "Latest".
 on:
   push:
-    branches: [ main ]
+    branches: [ main, master ]
     paths-ignore:
       - '**.md'
       - '.gitignore'

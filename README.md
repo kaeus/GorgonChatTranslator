@@ -185,6 +185,3 @@ in-app "update available" notice, set `github_repo` in the config to your
   English via a built-in word list, so they're never sent to the API.
 - Global-hotkey support is Windows-only (`RegisterHotKey`). The overlay itself
   is Tkinter/stdlib and runs elsewhere, just without the global hotkey.
-
-Part of the Gorgon overlay tool family (shares conventions with
-`GorgonBuffTracker`).
