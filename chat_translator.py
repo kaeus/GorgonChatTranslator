@@ -50,7 +50,14 @@ APP_ID   = "Kaeus.GorgonChatTranslator"
 # --------------------------------------------------------------------------- #
 #  Paths / constants
 # --------------------------------------------------------------------------- #
-APP_DIR     = os.path.dirname(os.path.abspath(__file__))
+# Where writable files (the config) live. In a PyInstaller onefile exe, __file__
+# points into the temporary _MEIPASS extraction dir that is deleted on exit, so
+# the config must be anchored next to the executable instead -- otherwise it is
+# written to a temp folder and disappears when the app closes.
+if getattr(sys, "frozen", False):
+    APP_DIR = os.path.dirname(sys.executable)
+else:
+    APP_DIR = os.path.dirname(os.path.abspath(__file__))
 CONFIG_PATH = os.path.join(APP_DIR, "chat_translator_config.json")
 
 
@@ -109,9 +116,10 @@ DEFAULT_CONFIG = {
     "hide_when_pg_inactive": False,
     "locked": False,
     "geometry": None,
-    # Optional in-app update check: set "owner/repo" to be told (in the overlay)
-    # when a newer release exists. Empty = disabled.
-    "github_repo": "",
+    # In-app update check: "owner/repo" whose latest GitHub Release is compared
+    # to this build's version.txt; a newer tag shows an "update available" note
+    # in the overlay. Set to "" to disable.
+    "github_repo": "kaeus/GorgonChatTranslator",
     "check_updates": True,
 }
 

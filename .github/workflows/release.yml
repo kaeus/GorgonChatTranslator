@@ -1,8 +1,10 @@
 name: build-release
 
 # Builds the standalone .exe and publishes a GitHub Release on every push to
-# main (skipping docs-only changes). The version auto-increments from the run
-# number, and the newest release is always surfaced by GitHub as "Latest".
+# main/master (skipping docs-only changes). The version is DERIVED FROM THE
+# LATEST RELEASE -- the patch number is bumped off whatever release is currently
+# newest -- so the exe's embedded version always matches its release tag, and
+# the newest release is always surfaced by GitHub as "Latest".
 on:
   push:
     branches: [ main, master ]
@@ -14,6 +16,10 @@ on:
 permissions:
   contents: write         # required to create releases / upload assets
 
+concurrency:              # serialize builds so two pushes can't pick the same version
+  group: build-release
+  cancel-in-progress: false
+
 jobs:
   build:
     runs-on: windows-latest
@@ -24,10 +30,22 @@ jobs:
         with:
           python-version: '3.12'
 
-      - name: Compute version
+      - name: Compute next version from latest release
         id: ver
         shell: bash
-        run: echo "version=1.0.${{ github.run_number }}" >> "$GITHUB_OUTPUT"
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          latest=$(gh release view --repo "$GITHUB_REPOSITORY" --json tagName -q .tagName 2>/dev/null || true)
+          if [[ -z "$latest" ]]; then
+            next="1.0.0"                       # no releases yet -> first version
+          else
+            ver="${latest#v}"                  # strip leading 'v'
+            IFS='.' read -r MA MI PA <<< "$ver"
+            next="${MA:-1}.${MI:-0}.$(( ${PA:-0} + 1 ))"   # bump patch
+          fi
+          echo "Next version: $next (latest release: ${latest:-none})"
+          echo "version=$next" >> "$GITHUB_OUTPUT"
 
       - name: Stamp version.txt
         shell: bash
