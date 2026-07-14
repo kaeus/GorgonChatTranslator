@@ -35,6 +35,12 @@ someone used and copies it to the clipboard.
   translate short Chinese/Japanese/Korean text; when it returns the line
   unchanged, the tool retries with a source language derived from the Unicode
   script, and never silently drops a clearly-foreign message.
+- **My-language dropdown** — the **my:en ▾** button in the title bar changes,
+  live, what incoming chat is translated *into* (and the source language for
+  your replies). No config edit or restart needed.
+- **Set character name from the UI** — the **name:** button in the footer opens
+  a small dialog to set your `player_name` on the fly (it's what identifies your
+  own lines for the reply feature).
 - **Reply-language dropdown** — the **reply→ auto ▾** button in the title bar
   sets the language your *own* messages are translated *into* when you hit the
   reverse hotkey:
@@ -84,12 +90,14 @@ minute at most.
 
 ## First-run setup
 
-On first launch it writes `chat_translator_config.json`. Set at least:
+On first launch it writes `chat_translator_config.json`. The two things worth
+setting can both be done **from the UI**:
 
 - **`player_name`** — your character name, so it can find *your* messages for
-  the reverse-reply feature.
+  the reverse-reply feature. Click the **name:** button in the footer.
 - **`my_lang`** — the language you read/speak (`en`, `es`, `fr`, …). Foreign
-  chat is translated *into* it; your replies are translated *from* it.
+  chat is translated *into* it; your replies are translated *from* it. Use the
+  **my:… ▾** dropdown in the title bar.
 
 ## Configuration (`chat_translator_config.json`)
 

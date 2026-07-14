@@ -541,6 +541,12 @@ class Translator(threading.Thread):
                     self.out_q.put(("_own", item[2], item[3], item[4]))
             elif kind == "reverse":
                 self._handle_reverse(item[1], item[2])
+            elif kind == "set_target":
+                # change your language (what incoming chat translates INTO, and
+                # the source for your replies). Cache held old-language results.
+                self.my_lang = item[1]
+                self.engine = GoogleTranslator(source="auto", target=self.my_lang)
+                self.cache.clear()
 
     def stop(self):
         self.stop_evt.set()
@@ -693,8 +699,8 @@ class ChatOverlay(tk.Tk):
             pass
         self.configure(bg=BG)
         geo = self.cfg.get("geometry")
-        self.geometry(geo if geo else "480x360+60+60")
-        self.minsize(300, 180)
+        self.geometry(geo if geo else "600x360+60+60")
+        self.minsize(400, 180)
 
         self._icon_path = None
         if appicon is not None:
@@ -720,12 +726,10 @@ class ChatOverlay(tk.Tk):
         tk.Label(bar, text=f"PG Chat Translator v{APP_VERSION}", bg=HEADER,
                  fg=ACCENT, font=self.f_title).pack(side="left", padx=(8, 4))
 
-        # target-language dropdown: what everything is translated INTO
+        # "my language" dropdown: what incoming chat is translated INTO
+        self._build_mylang_menu(bar)
+        # reply-language dropdown: what your replies are translated INTO
         self._build_lang_menu(bar)
-
-        det = "langdetect" if HAVE_LANGDETECT else "script-only"
-        tk.Label(bar, text=det, bg=HEADER, fg=MUTED,
-                 font=self.f_small).pack(side="left", padx=4)
 
         tk.Button(bar, text="x", bg=HEADER, fg=MUTED, bd=0,
                   activebackground=BAD, activeforeground="#fff",
@@ -761,7 +765,8 @@ class ChatOverlay(tk.Tk):
         foot.pack(fill="x", side="bottom")
         foot.pack_propagate(False)
         hk = self.cfg.get("reverse_hotkey", "ctrl+alt+t")
-        self.status = tk.Label(foot, text=f"watching chat  ({hk} = reply)",
+        det = "langdetect" if HAVE_LANGDETECT else "script-only"
+        self.status = tk.Label(foot, text=f"watching chat  ({hk} = reply)  ·  {det}",
                                bg=HEADER, fg=MUTED, font=self.f_small,
                                anchor="w")
         self.status.pack(side="left", padx=6)
@@ -774,6 +779,13 @@ class ChatOverlay(tk.Tk):
                                 command=self._toggle_hide, cursor="hand2")
         self.pg_btn.pack(side="right", padx=6)
         self._apply_pg_visual()
+        # click to set your character name (used to find YOUR messages)
+        self.name_btn = tk.Button(
+            foot, text="", bg=HEADER, fg=MUTED, bd=0, activebackground=PANEL,
+            activeforeground=FG, font=self.f_small, cursor="hand2",
+            command=self._edit_player_name)
+        self.name_btn.pack(side="right", padx=6)
+        self._apply_name_visual()
         for ev, fn in (("<Button-1>", self._start_resize),
                        ("<B1-Motion>", self._on_resize),
                        ("<ButtonRelease-1>", self._persist_state)):
@@ -987,6 +999,95 @@ class ChatOverlay(tk.Tk):
             self.status.config(text=f"replies will translate into {name} ({code})")
         else:
             self.status.config(text="replies match the channel you speak in (auto)")
+
+    # -- my-language dropdown ------------------------------------------------
+    def _build_mylang_menu(self, bar):
+        cur = self.cfg.get("my_lang", "en")
+        self.mylang_var = tk.StringVar(value=cur)
+        self.mylang_mb = tk.Menubutton(
+            bar, text=f"my:{cur} ▾", bg=HEADER, fg=ACCENT, bd=0,
+            activebackground=PANEL, activeforeground=FG, font=self.f_small,
+            cursor="hand2")
+        menu = tk.Menu(self.mylang_mb, tearoff=0, bg=HEADER, fg=FG,
+                       activebackground=ACCENT, activeforeground="#ffffff", bd=0)
+        self.mylang_mb.config(menu=menu)
+        for label, code in COMMON_LANGS:
+            menu.add_radiobutton(label=f"{label}  ({code})", value=code,
+                                 variable=self.mylang_var,
+                                 command=lambda c=code: self._set_my_lang(c))
+        self.mylang_mb.pack(side="left", padx=2)
+
+    def _set_my_lang(self, code):
+        """Change your language: what incoming chat is translated INTO, and the
+        source language for your replies. Applied live in the translator."""
+        self.mylang_var.set(code)
+        self.mylang_mb.config(text=f"my:{code} ▾")
+        self.cfg["my_lang"] = code
+        self._persist_state()
+        self.in_q.put(("set_target", code))
+        name = LANG_NAMES.get(code, code)
+        self.status.config(text=f"reading chat in {name} ({code})")
+
+    # -- character name ------------------------------------------------------
+    def _apply_name_visual(self):
+        name = str(self.cfg.get("player_name", "")).strip()
+        self.name_btn.config(text=f"name: {name}" if name else "set name…",
+                             fg=FG if name else WARN)
+
+    def _edit_player_name(self):
+        top = tk.Toplevel(self)
+        top.title("Character name")
+        top.configure(bg=BG)
+        top.attributes("-topmost", True)
+        top.resizable(False, False)
+        try:
+            top.overrideredirect(True)
+        except Exception:
+            pass
+        pad = tk.Frame(top, bg=BG, highlightbackground=MUTED,
+                       highlightthickness=1)
+        pad.pack(fill="both", expand=True)
+        tk.Label(pad, text="Your character name", bg=BG, fg=FG,
+                 font=self.f_msg).pack(padx=14, pady=(12, 2))
+        tk.Label(pad, text="(used to find YOUR chat lines for replies)", bg=BG,
+                 fg=MUTED, font=self.f_small).pack(padx=14, pady=(0, 6))
+        var = tk.StringVar(value=self.cfg.get("player_name", ""))
+        ent = tk.Entry(pad, textvariable=var, bg=PANEL, fg=FG,
+                       insertbackground=FG, bd=0, font=self.f_msg,
+                       highlightthickness=1, highlightbackground=MUTED,
+                       highlightcolor=ACCENT, width=26, justify="center")
+        ent.pack(padx=14, pady=2, ipady=4)
+        ent.focus_set()
+        ent.select_range(0, "end")
+
+        def save():
+            name = var.get().strip()
+            if name:
+                self.cfg["player_name"] = name
+                self.watcher.me = name.lower()      # live: watcher self-detection
+                self._persist_state()
+                self._apply_name_visual()
+                self.status.config(text=f"character set to {name}")
+            top.destroy()
+
+        btns = tk.Frame(pad, bg=BG)
+        btns.pack(pady=(8, 12))
+        tk.Button(btns, text="Save", command=save, bg=PANEL, fg=GOOD, bd=0,
+                  activebackground=ACCENT, activeforeground="#fff",
+                  font=self.f_small, width=8, cursor="hand2").pack(side="left",
+                                                                   padx=5)
+        tk.Button(btns, text="Cancel", command=top.destroy, bg=PANEL, fg=MUTED,
+                  bd=0, activebackground=BAD, activeforeground="#fff",
+                  font=self.f_small, width=8, cursor="hand2").pack(side="left",
+                                                                   padx=5)
+        ent.bind("<Return>", lambda e: save())
+        top.bind("<Escape>", lambda e: top.destroy())
+        # center over the overlay
+        top.update_idletasks()
+        x = self.winfo_x() + (self.winfo_width() - top.winfo_width()) // 2
+        y = self.winfo_y() + 44
+        top.geometry(f"+{max(0, x)}+{max(0, y)}")
+        top.grab_set()
 
     def _rebuild_seen_menu(self):
         m = self.seen_menu
