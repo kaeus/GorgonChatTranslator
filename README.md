@@ -155,40 +155,6 @@ runtime) and embeds `version.txt` so the app knows its own version.
 
 ---
 
-## Versioning & auto-published releases
-
-The exe reads its version from a `version.txt` that is bundled into it, and
-shows it in the title bar (`PG Chat Translator v1.0.7`). The committed
-`version.txt` is only a `0.0.0-dev` placeholder for running from source — CI
-generates the real value at build time. The version is **derived from your
-releases**, so the exe's version always matches its release tag:
-
-- On every push to `main`/`master` (docs-only changes skipped) or a manual **Run
-  workflow**, a Windows runner looks up the **latest GitHub Release**, bumps its
-  patch number (`v1.0.6` → `1.0.7`; none yet → `1.0.0`), stamps that into
-  `version.txt`, builds, and publishes a new release with the matching tag.
-- The release is always surfaced by GitHub as **Latest**, so
-  `…/releases/latest` is your always-current download, and older exes see the
-  new tag via the in-app update check.
-
-Because the version comes from the latest release, you can **jump minor/major**
-by publishing one release manually (e.g. tag `v1.1.0`) — the next automatic
-build continues from there (`1.1.1`, `1.1.2`, …).
-
-**One-time setup** to turn this repo into that pipeline:
-
-```sh
-cd GorgonChatTranslator
-git init && git add . && git commit -m "initial"
-gh repo create GorgonChatTranslator --public --source=. --push
-```
-
-No secrets needed — the workflow uses the built-in `GITHUB_TOKEN`. The in-app
-"update available" notice is already wired to `kaeus/GorgonChatTranslator` via
-the `github_repo` config key.
-
----
-
 ## Notes / limitations
 
 - On very short lines (2–3 words) `langdetect` can mislabel the language (e.g.
