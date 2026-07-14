@@ -1,0 +1,24 @@
+# Python
+__pycache__/
+*.py[cod]
+*.egg-info/
+.venv/
+venv/
+env/
+
+# PyInstaller build output
+build/
+dist/
+*.manifest
+
+# Generated at build time
+app.ico
+_appicons/
+Gorgon_Chat_Translator.ico
+
+# User-specific runtime config (geometry, player name, prefs)
+chat_translator_config.json
+
+# OS cruft
+Thumbs.db
+.DS_Store

@@ -1,0 +1,59 @@
+name: build-release
+
+# Builds the standalone .exe and publishes a GitHub Release on every push to
+# main (skipping docs-only changes). The version auto-increments from the run
+# number, and the newest release is always surfaced by GitHub as "Latest".
+on:
+  push:
+    branches: [ main ]
+    paths-ignore:
+      - '**.md'
+      - '.gitignore'
+  workflow_dispatch:      # allow manual "Run workflow" builds too
+
+permissions:
+  contents: write         # required to create releases / upload assets
+
+jobs:
+  build:
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+
+      - name: Compute version
+        id: ver
+        shell: bash
+        run: echo "version=1.0.${{ github.run_number }}" >> "$GITHUB_OUTPUT"
+
+      - name: Stamp version.txt
+        shell: bash
+        run: printf '%s' "${{ steps.ver.outputs.version }}" > version.txt
+
+      - name: Install dependencies
+        run: |
+          python -m pip install --upgrade pip pyinstaller
+          python -m pip install -r requirements.txt
+
+      - name: Generate icon
+        run: python gen_icon.py
+
+      - name: Build exe
+        run: python -m PyInstaller --noconfirm --clean GorgonChatTranslator.spec
+
+      - name: Name the versioned artifact
+        shell: bash
+        run: cp "dist/GorgonChatTranslator.exe" "dist/GorgonChatTranslator-v${{ steps.ver.outputs.version }}.exe"
+
+      - name: Publish release
+        uses: softprops/action-gh-release@v2
+        with:
+          tag_name: v${{ steps.ver.outputs.version }}
+          name: v${{ steps.ver.outputs.version }}
+          generate_release_notes: true
+          files: |
+            dist/GorgonChatTranslator.exe
+            dist/GorgonChatTranslator-v${{ steps.ver.outputs.version }}.exe

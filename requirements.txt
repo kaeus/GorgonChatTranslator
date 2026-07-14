@@ -1,0 +1,7 @@
+# Project Gorgon Chat Translator -- runtime dependencies
+deep-translator>=1.11      # free Google/MyMemory/etc. translation backends
+langdetect>=1.0.9          # language detection (needed for the reverse-reply
+                           # feature and to avoid translating English)
+
+# Build-only (for build_exe.bat / the .spec):
+#   pip install pyinstaller
